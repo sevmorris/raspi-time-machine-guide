@@ -1,0 +1,26 @@
+site_name: Raspberry Pi Time Machine — Guide
+site_url: https://sevmorris.github.io/raspi-time-machine-guide/
+repo_url: https://github.com/sevmorris/raspi-time-machine-guide
+repo_name: raspi-time-machine-guide
+edit_uri: edit/master/docs/
+strict: true
+
+theme:
+  name: material
+  features:
+    - content.code.copy
+    - navigation.sections
+    - navigation.instant
+
+nav:
+  - Home: index.md
+  - Guide: RasPi-Time-Machine_Guide.md
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
