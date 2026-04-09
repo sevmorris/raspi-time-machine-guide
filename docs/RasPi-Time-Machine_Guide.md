@@ -24,24 +24,59 @@
    sudo apt update && sudo apt -y install samba avahi-daemon
    ```
 
-2. **Create/verify mount** (external SSD): ensure it's in `/etc/fstab` and mounted at `/mnt/timemachine`.
+2. **Prepare the USB SSD** — identify the device, format if needed, and get its UUID:
 
-3. **Configure Samba (Time Machine)** — use the `smb.conf` below, then test & restart:
+   ```bash
+   lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINT    # identify the drive (e.g. /dev/sda1)
+   sudo mkfs.ext4 /dev/sda1                # format as ext4 (WARNING: destructive — skip if already formatted)
+   sudo blkid /dev/sda1                    # copy the UUID for fstab
+   ```
+
+3. **Create the mount point and set permissions**:
+
+   ```bash
+   sudo mkdir -p /mnt/timemachine
+   sudo chown <username>:<username> /mnt/timemachine
+   sudo chmod 755 /mnt/timemachine
+   ```
+
+4. **Mount the SSD** — add the UUID line to `/etc/fstab` (see section 4.1), then mount:
+
+   ```bash
+   sudo mount -a
+   mount | grep /mnt/timemachine            # verify it's mounted
+   ```
+
+5. **Create the Samba user**:
+
+   ```bash
+   sudo smbpasswd -a <username>            # prompts for SMB password
+   ```
+
+   > If `<username>` doesn't exist as a Linux user yet: `sudo adduser <username>` first.
+
+6. **Configure Samba (Time Machine)** — use the `smb.conf` below, then test & restart:
 
    ```bash
    testparm -s
    sudo systemctl restart smbd
    ```
 
-4. **Advertise via Bonjour** (Avahi). If using a custom service file, place it in `/etc/avahi/services/` and restart:
+7. **Enable services** so they start on reboot:
+
+   ```bash
+   sudo systemctl enable smbd avahi-daemon
+   ```
+
+8. **Advertise via Bonjour** (Avahi). If using a custom service file, place it in `/etc/avahi/services/` and restart:
 
    ```bash
    sudo systemctl restart avahi-daemon
    ```
 
-5. **From macOS**: Connect in Finder → Go → Connect to Server → `smb://<pi-hostname>/<share-name>` and add in **System Settings → Time Machine**.
+9. **From macOS**: Connect in Finder → Go → Connect to Server → `smb://<pi-hostname>/<share-name>` and add in **System Settings → Time Machine**.
 
-6. **Verify**: on Mac, run:
+10. **Verify**: on Mac, run:
 
    ```bash
    tmutil destinationinfo
@@ -59,6 +94,8 @@
 ## 4) Installation & Configuration Details
 
 ### 4.1 `/etc/fstab`
+
+Replace the UUID below with the one from `sudo blkid /dev/sda1` on your system.
 
 ```ini
 proc            /proc           proc    defaults          0       0
@@ -86,8 +123,8 @@ UUID=21f34b8f-69e9-4086-b605-15c0e90cfe47  /mnt/timemachine  ext4  defaults,noat
    mdns name = mdns
 
    # Security / integrity
-   server signing = auto
-   # smb encrypt = required   # (optional, CPU cost)
+   server signing = if_required   # "auto" is a valid alias; testparm normalizes it to this
+   # smb encrypt = required   # (optional, CPU cost; recommended on untrusted networks)
 
    security = user
    map to guest = never
@@ -100,8 +137,8 @@ UUID=21f34b8f-69e9-4086-b605-15c0e90cfe47  /mnt/timemachine  ext4  defaults,noat
    fruit:locking = none
    fruit:zero_file_id = yes
 
-   # **HARD BIND**: loopback + eth0 address ONLY
-   interfaces = <LAN_IP>/8 <LAN_IP>/32
+   # Bind to loopback + local subnet only (adjust /24 if your subnet mask differs)
+   interfaces = lo <LAN_IP>/24
    bind interfaces only = yes
 
    # (Optional) Drop legacy port 139; use modern 445 only
@@ -113,7 +150,7 @@ UUID=21f34b8f-69e9-4086-b605-15c0e90cfe47  /mnt/timemachine  ext4  defaults,noat
    printing = bsd
    printcap name = /dev/null
 
-   ntlm auth = yes
+   ntlm auth = ntlmv1-permitted   # "yes" is a deprecated alias; use ntlmv2-only if all clients support it
 
 [TimeMachine]
    path = /mnt/timemachine
@@ -281,7 +318,7 @@ TimeMachine
   ```ini
   server min protocol = SMB2
   client min protocol = SMB2
-  ntlm auth = yes
+  ntlm auth = ntlmv1-permitted
   ```
 
 - On macOS, remove stale Keychain items for the server and reconnect.
