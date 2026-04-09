@@ -15,6 +15,17 @@
 - **Quota (fruit:time machine max size):** `800G`
 
 
+## Pre-flight Checklist
+
+Before starting, confirm:
+
+- [ ] Raspberry Pi is running Debian 12 (bookworm) or later
+- [ ] Pi is connected via **Ethernet** (Wi-Fi works but is slower and less reliable for backups)
+- [ ] USB SSD is connected and visible in `lsblk`
+- [ ] USB SSD has enough space — typical guidance is 1.5–2× the size of the Mac's storage
+- [ ] macOS 10.15 (Catalina) or later (SMB3 + Time Machine over SMB is well-supported from Catalina onward)
+- [ ] You know the username that will own the share
+
 
 ## 2) Quickstart Runbook
 
@@ -300,6 +311,54 @@ TimeMachine
 - Update cadence: `sudo apt update && sudo apt -y upgrade`
 
 
+## 6.1) Backup & Recovery
+
+### Back up the Pi configuration
+
+The key files to preserve are:
+
+```bash
+/etc/samba/smb.conf
+/etc/fstab
+/etc/avahi/services/timemachine.service   # if you created one
+```
+
+A simple way to capture them:
+
+```bash
+sudo tar czf ~/pi-timemachine-config-$(date +%F).tar.gz \
+  /etc/samba/smb.conf /etc/fstab /etc/avahi/services/
+```
+
+### Recover Time Machine data if SMB fails
+
+If `smbd` won't start, the sparsebundle is still accessible on the ext4 filesystem. Mount the SSD on any Linux machine and copy the `.sparsebundle` directory off with `rsync`. On macOS you can then open it directly with Finder or Disk Utility.
+
+### Migrate to a new Pi or larger disk
+
+1. Copy the sparsebundle off the old disk: `rsync -avP /mnt/timemachine/ /mnt/new-disk/`
+2. Update the UUID in `/etc/fstab` to the new disk's UUID (`sudo blkid`)
+3. Restore your `smb.conf` and re-run `sudo systemctl restart smbd`
+4. On macOS, remove and re-add the Time Machine destination — it will recognize the existing sparsebundle
+
+
+## 6.2) Performance Tips
+
+- **Use Ethernet**, not Wi-Fi. Backup throughput over Wi-Fi is typically 3–5× slower and more prone to mid-backup disconnects.
+
+- **USB 3.0 SSD** is strongly recommended over USB 2.0 spinning disk. Write speeds matter for initial backups (which can transfer hundreds of GB).
+
+- **Check I/O wait** if backups feel sluggish:
+
+  ```bash
+  iostat -x 2    # requires sysstat: sudo apt install sysstat
+  ```
+
+- **USB power issues** are a common cause of SSD dropouts on Pi. Use a powered USB hub or a Pi 5 (which has better USB power delivery) if you see the drive disappearing from `lsblk`.
+
+- **log2ram** (visible in `df -hT` output) keeps logs in RAM to reduce SD card wear — already active on this setup.
+
+
 ## 7) Sizing & Quotas
 
 - Typical guidance: set Time Machine max size to **70–90%** of the dedicated disk.
@@ -308,6 +367,21 @@ TimeMachine
 
 
 ## 8) Troubleshooting Playbook
+
+### Share doesn't appear in Time Machine preferences
+
+1. Confirm Avahi is running: `systemctl status avahi-daemon`
+2. Confirm Samba is advertising as a Time Machine target — check that `fruit:time machine = yes` is set in the `[TimeMachine]` share section.
+3. On macOS, try connecting manually first (Finder → Go → Connect to Server → `smb://<pi-hostname>/TimeMachine`), then check System Settings → Time Machine.
+4. If mDNS discovery is unreliable on your network, connect by IP instead: `smb://<LAN_IP>/TimeMachine`.
+
+
+### macOS repeatedly asks for password / authentication fails
+
+- Remove stale Keychain entries: open **Keychain Access**, search for the Pi hostname, delete any matching items, then reconnect.
+- Verify the SMB user exists and password is set: `sudo pdbedit -L` should list `<username>`.
+- Confirm `valid users = <username>` in `smb.conf` matches the account name exactly.
+
 
 ### NT_STATUS_NTLM_BLOCKED
 
@@ -325,13 +399,36 @@ TimeMachine
 
 
 ### Share visible but cannot mount
-- Verify permissions/ownership of `/mnt/timemachine` and parent path.
+
+- Verify permissions/ownership of `/mnt/timemachine`:
+
+  ```bash
+  ls -la /mnt/timemachine    # should be owned by <username>
+  ```
+
+- Confirm the SSD is actually mounted: `mount | grep /mnt/timemachine`
 - Check `journalctl -u smbd` for ACL or path denials.
 
 
-### Backups stall/fail
-- Inspect network stability and I/O (`dmesg`, USB power, SMART if available).
-- Consider repairing the sparsebundle on macOS via Disk Utility or `hdiutil` (with caution).
+### Backups stall or fail mid-backup
+
+- Check network stability: a wired connection is strongly preferred.
+- Check USB: run `dmesg | grep -i usb` for power or reset errors. A powered USB hub can help on Pi 4.
+- Check SMART health if available: `sudo smartctl -a /dev/sda` (requires `smartmontools`).
+- If the sparsebundle is corrupted, repair it on macOS:
+
+  ```bash
+  hdiutil repair /Volumes/TimeMachine/<ComputerName>.sparsebundle
+  ```
+
+  Or open Disk Utility, select the sparsebundle, and run First Aid.
+
+
+### Backups are very slow
+
+- Confirm you're on Ethernet, not Wi-Fi.
+- Check disk I/O: `iostat -x 2` — high `%util` on `sda` suggests the SSD is the bottleneck.
+- First backup is always slow (full copy); subsequent backups are incremental and much faster.
 
 
 ### fruit_get_bandsize / fruit_tmsize_do_dirent warnings
@@ -342,7 +439,7 @@ fruit_get_bandsize: Didn't find band-size key in [...sparsebundle/Info.plist]
 fruit_tmsize_do_dirent: Processing sparsebundle [...] failed
 ```
 
-**These are harmless.** The Samba `fruit` module tries to read the sparsebundle's band size to calculate quota usage. If the `band-size` key is missing from `Info.plist` (common with macOS-created bundles), Samba falls back to default behavior. Time Machine backups still work correctly—this only affects Samba's internal size estimation.
+**These are harmless and do not affect backups.** The Samba `fruit` module tries to read the sparsebundle's band size to calculate quota usage. If the `band-size` key is missing from `Info.plist` (common with macOS-created bundles), Samba falls back to default behavior. Time Machine backups still work correctly — this only affects Samba's internal size estimation.
 
 
 ## 9) Logs (Recent excerpts)
