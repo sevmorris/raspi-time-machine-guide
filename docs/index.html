@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RPTM-1 — Raspberry Pi Time Machine Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-primary:              #b0243f;
+      --color-link:                 #0066cc;
+      --color-text:                 #333333;
+      --color-text-secondary:       #666666;
+      --color-text-tertiary:        #999999;
+      --color-border:               #cccccc;
+      --color-border-light:         #e5e5e5;
+      --color-background:           #ffffff;
+      --color-background-secondary: #f8f9fa;
+      --color-background-tertiary:  #f1f3f4;
+      --color-danger:               #dc3545;
+      --color-warning-dark:         #7a5500;
+      --font-family-base: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      --font-family-mono: "JetBrains Mono", "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+      --sidebar-width: 300px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-family-base);
+      font-size: 16px;
+      background: #e8ecf0;
+      color: var(--color-text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    .main-header { position: fixed; top: 0; left: 0; right: 0; z-index: 200; }
+    .layout { display: flex; min-height: 100vh; padding-top: 100px; }
+    nav {
+      position: fixed; left: 0; top: 100px;
+      height: calc(100vh - 100px);
+      width: var(--sidebar-width); min-width: var(--sidebar-width);
+      background: var(--color-background-secondary);
+      border-right: 2px solid var(--color-border);
+      overflow-y: auto; flex-shrink: 0; z-index: 100;
+      display: flex; flex-direction: column;
+    }
+    .nav-header { padding: 1.5rem 1rem 1rem; border-bottom: 1px solid var(--color-border); background: var(--color-background); }
+    .nav-to-num { font-family: var(--font-family-mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-text-tertiary); display: block; margin-bottom: 4px; }
+    .nav-title { font-size: 1.1rem; font-weight: 600; line-height: 1.3; color: var(--color-text); letter-spacing: 0.5px; text-transform: uppercase; }
+    nav a.section-head { display: block; padding: 0.75rem 1rem 0.2rem; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-tertiary); text-decoration: none; pointer-events: none; }
+    nav a:not(.section-head) { display: block; padding: 0.25rem 1rem; font-size: 0.875rem; color: var(--color-text); text-decoration: none; border-left: 3px solid transparent; transition: all 0.15s ease; }
+    nav a:not(.section-head):hover { background: var(--color-background-tertiary); border-left-color: var(--color-primary); color: var(--color-primary); }
+    main { flex: 1; margin-left: var(--sidebar-width); height: calc(100vh - 100px); overflow-y: auto; background: #e8ecf0; min-width: 0; display: flex; flex-direction: column; }
+    .doc-masthead { background-color: #1a365d; color: #fff; padding: 0.75rem 1.5rem; display: flex; align-items: center; font-size: 0.875rem; font-weight: 500; letter-spacing: 0.025em; border-bottom: 3px solid var(--color-primary); }
+    .masthead-org { flex: 1; text-align: left; }
+    .masthead-center { flex: 2; text-align: center; font-weight: 400; }
+    .masthead-center strong { font-weight: 600; }
+    .masthead-meta { flex: 1; text-align: right; font-family: var(--font-family-mono); font-size: 0.78rem; }
+    .doc-infobar { background: var(--color-background); border-bottom: 2px solid var(--color-border); padding: 0.5rem 1.5rem; display: flex; gap: 2.5rem; font-size: 0.78rem; font-family: var(--font-family-mono); }
+    .infobar-cell .lbl { color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; margin-right: 6px; }
+    .infobar-cell .val { color: var(--color-text); font-weight: 500; }
+    .infobar-cell .val a { color: var(--color-link); text-decoration: none; }
+    .content { padding: 2rem 3rem 5rem; flex: 1; max-width: 1200px; }
+    section { margin-bottom: 3rem; }
+    .section-heading { display: flex; align-items: baseline; gap: 0.75rem; border-bottom: 2px solid var(--color-border); padding-bottom: 0.625rem; margin-bottom: 1.25rem; }
+    .section-num { font-family: var(--font-family-mono); font-size: 0.8rem; font-weight: 500; color: var(--color-text-secondary); min-width: 36px; }
+    h2 { font-size: 2rem; font-weight: 400; color: var(--color-text); }
+    h3 { font-size: 1.15rem; font-weight: 600; margin: 1.5rem 0 0.6rem; color: var(--color-text); }
+    .section-sub { font-size: 0.8rem; color: var(--color-text-tertiary); font-family: var(--font-family-mono); margin-left: auto; }
+    p { margin-bottom: 0.75rem; }
+    a { color: var(--color-link); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    ul, ol { padding-left: 1.5rem; margin-bottom: 0.75rem; }
+    li { margin-bottom: 0.3rem; line-height: 1.55; }
+    code { font-family: var(--font-family-mono); font-size: 0.85em; background: var(--color-background-tertiary); border: 1px solid var(--color-border-light); padding: 1px 5px; border-radius: 3px; }
+    pre { font-family: var(--font-family-mono); font-size: 0.875rem; background: #1e293b; color: #e2e8f0; border: none; padding: 0.75rem 1rem; overflow-x: auto; margin-bottom: 0.75rem; line-height: 1.5; border-radius: 4px; }
+    pre code { background: none; border: none; padding: 0; color: inherit; }
+    .proc { border: 1px solid #aaa; border-top: 3px solid var(--color-primary); margin-bottom: 1.5rem; border-radius: 0 0 3px 3px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    .proc-header { background: var(--color-background-secondary); border-bottom: 1px solid var(--color-border); padding: 0.5rem 1rem; display: flex; align-items: baseline; gap: 0.625rem; }
+    .proc-num { font-family: var(--font-family-mono); font-size: 0.75rem; font-weight: 500; color: var(--color-text-secondary); min-width: 38px; }
+    .proc-header h3 { font-size: 0.95rem; font-weight: 600; color: var(--color-text); margin: 0; }
+    .proc-body { padding: 1rem; background: var(--color-background); }
+    .proc-body pre { margin-bottom: 0.625rem; }
+    .proc-body p:last-child, .proc-body pre:last-child { margin-bottom: 0; }
+    .callout { border: 1px solid var(--color-border); border-left: 4px solid var(--color-link); background: var(--color-background); margin: 0.875rem 0; border-radius: 0 3px 3px 0; overflow: hidden; }
+    .callout-label { display: block; background: var(--color-background-secondary); color: var(--color-text-secondary); font-weight: 600; font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 4px 12px; border-bottom: 1px solid var(--color-border-light); }
+    .callout-body { padding: 0.625rem 0.875rem; font-size: 0.9rem; }
+    .callout-body pre { margin: 0.5rem 0 0; }
+    .callout-warn { border-left-color: var(--color-danger); }
+    .callout-warn .callout-label { background: #fdf2f2; color: var(--color-danger); }
+    .callout-caution { border-left-color: #e6a800; }
+    .callout-caution .callout-label { background: #fffdf0; color: var(--color-warning-dark); }
+    .callout-tip { border-left-color: var(--color-primary); }
+    .callout-tip .callout-label { background: #fdf2f4; color: var(--color-primary); }
+    .table-scroll { overflow-x: auto; margin-bottom: 1rem; -webkit-overflow-scrolling: touch; }
+    .table-scroll > .ref-table { margin-bottom: 0; }
+    .ref-table { width: 100%; border-collapse: collapse; border: 1px solid var(--color-border); margin-bottom: 1rem; font-size: 0.9rem; background: var(--color-background); border-radius: 3px; overflow: hidden; }
+    .ref-table caption { caption-side: top; text-align: left; font-size: 0.72rem; font-family: var(--font-family-mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-tertiary); padding-bottom: 5px; }
+    .ref-table th { background: var(--color-background-secondary); text-align: left; padding: 8px 12px; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary); border-bottom: 2px solid var(--color-border); border-right: 1px solid var(--color-border-light); }
+    .ref-table th:last-child { border-right: none; }
+    .ref-table td { padding: 8px 12px; border-bottom: 1px solid var(--color-border-light); border-right: 1px solid var(--color-border-light); vertical-align: top; }
+    .ref-table td:last-child { border-right: none; }
+    .ref-table tr:last-child td { border-bottom: none; }
+    .ref-table td:first-child { font-family: var(--font-family-mono); font-size: 0.85rem; }
+    .checklist { list-style: none; padding-left: 0; }
+    .checklist li { position: relative; padding-left: 1.9rem; margin-bottom: 0.45rem; }
+    .checklist li::before { content: "☐"; position: absolute; left: 0.35rem; top: -1px; color: var(--color-primary); font-size: 1.05rem; }
+    details.dump { border: 1px solid var(--color-border); border-radius: 3px; background: var(--color-background); margin-bottom: 1rem; }
+    details.dump > summary { cursor: pointer; padding: 0.6rem 0.875rem; font-size: 0.9rem; font-weight: 600; background: var(--color-background-secondary); border-radius: 3px; list-style-position: inside; }
+    details.dump[open] > summary { border-bottom: 1px solid var(--color-border); border-radius: 3px 3px 0 0; }
+    details.dump > summary .hint { font-weight: 400; color: var(--color-text-tertiary); font-family: var(--font-family-mono); font-size: 0.78rem; margin-left: 0.4rem; }
+    details.dump .dump-body { padding: 0.875rem; }
+    details.dump .dump-body pre { max-height: 460px; overflow: auto; margin-bottom: 0; }
+    .doc-footer { border-top: 2px solid var(--color-border); padding: 0.625rem 3rem; display: flex; justify-content: space-between; gap: 1rem; font-size: 0.72rem; font-family: var(--font-family-mono); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-tertiary); background: var(--color-background-secondary); }
+    @media (max-width: 860px) {
+      .layout { flex-direction: column; height: auto; padding-top: 120px; }
+      .doc-masthead { flex-direction: column; gap: 3px; padding: 0.625rem 1.25rem; }
+      .masthead-org, .masthead-center, .masthead-meta { flex: none; text-align: center; }
+      .doc-infobar { flex-direction: column; gap: 3px; padding: 0.5rem 1.25rem; }
+      nav { position: relative; height: auto; width: 100%; min-width: 0; top: auto; border-right: none; border-bottom: 2px solid var(--color-border); flex-direction: row; flex-wrap: wrap; padding: 4px 0; overflow-x: auto; }
+      .nav-header { display: none; }
+      nav a.section-head { display: none; }
+      nav a:not(.section-head) { white-space: nowrap; padding: 4px 10px; }
+      main { margin-left: 0; height: auto; }
+      .content { padding: 1.75rem 1.25rem 3.75rem; }
+      .doc-footer { padding: 0.625rem 1.25rem; flex-direction: column; gap: 3px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="main-header">
+  <div class="doc-masthead">
+    <div class="masthead-org">Personal Systems / Backup Infrastructure</div>
+    <div class="masthead-center">RASPBERRY PI TIME MACHINE / <strong>Build, Operate &amp; Troubleshoot</strong></div>
+    <div class="masthead-meta">RPTM-1 / PAGES: N/A</div>
+  </div>
+  <div class="doc-infobar">
+    <div class="infobar-cell"><span class="lbl">TARGET:</span><span class="val">Debian 12 (bookworm) · Samba 4.x</span></div>
+    <div class="infobar-cell"><span class="lbl">CLIENT:</span><span class="val">macOS 10.15+ over SMB3</span></div>
+    <div class="infobar-cell"><span class="lbl">REPO:</span><span class="val"><a href="https://github.com/sevmorris/raspi-time-machine-guide">sevmorris/raspi-time-machine-guide</a></span></div>
+  </div>
+</header>
+
+<div class="layout">
+
+<nav>
+  <div class="nav-header">
+    <span class="nav-to-num">RPTM-1</span>
+    <span class="nav-title">Raspberry Pi<br>Time Machine</span>
+  </div>
+  <a class="section-head">Sect. 1 — Overview</a>
+  <a href="#overview">1. Overview</a>
+  <a href="#preflight">1.2 Pre-flight Checklist</a>
+  <a href="#architecture">1.3 System Architecture</a>
+  <a class="section-head">Sect. 2 — Build</a>
+  <a href="#quickstart">2. Quickstart Runbook</a>
+  <a class="section-head">Sect. 3 — Configuration</a>
+  <a href="#fstab">3.1 /etc/fstab</a>
+  <a href="#smbconf">3.2 smb.conf</a>
+  <a href="#avahi">3.3 Avahi Service File</a>
+  <a href="#verify">3.4 Verify Samba</a>
+  <a class="section-head">Sect. 4 — macOS</a>
+  <a href="#macos">4. macOS Client Setup</a>
+  <a class="section-head">Sect. 5 — Operations</a>
+  <a href="#ops">5.1 Routine Maintenance</a>
+  <a href="#backup">5.2 Backup &amp; Recovery</a>
+  <a href="#perf">5.3 Performance Tips</a>
+  <a href="#sizing">5.4 Sizing &amp; Quotas</a>
+  <a class="section-head">Sect. 6 — Troubleshooting</a>
+  <a href="#trouble">6. Troubleshooting Playbook</a>
+  <a class="section-head">Sect. 7 — Reference</a>
+  <a href="#reference">7. Captured Reference Output</a>
+</nav>
+
+<main>
+  <div class="content">
+<section id="overview">
+<div class="section-heading"><span class="section-num">1.</span><h2>Overview</h2><span class="section-sub">at a glance</span></div>
+
+<p>This guide covers building, operating and troubleshooting a <strong>macOS Time Machine destination on a Raspberry Pi</strong>, served over SMB. The configuration is vendor-neutral and uses only Debian / Raspberry Pi OS packages.</p>
+<p>Every command uses generic placeholders. Substitute your own values before you run anything:</p>
+<div class="table-scroll"><table class="ref-table">
+<caption>Table 1-1. Placeholders Used Throughout</caption>
+<thead><tr><th>Placeholder</th><th>Meaning</th><th>Example</th></tr></thead>
+<tbody>
+<tr><td>&lt;username&gt;</td><td>The Linux user that owns the share</td><td><code>pi</code></td></tr>
+<tr><td>&lt;pi-hostname&gt;</td><td>The Pi's hostname on your LAN</td><td><code>raspi</code></td></tr>
+<tr><td>&lt;LAN_IP&gt;</td><td>The Pi's address on your network</td><td><code>192.168.1.20</code></td></tr>
+<tr><td>&lt;share-name&gt;</td><td>The SMB share name</td><td><code>TimeMachine</code></td></tr>
+<tr><td>&lt;your-disk-uuid&gt;</td><td>UUID of the backup disk, from <code>blkid</code></td><td><code>21f3…cfe47</code></td></tr>
+</tbody></table></div>
+<div class="table-scroll"><table class="ref-table">
+<caption>Table 1-2. Reference Configuration</caption>
+<thead><tr><th>Item</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>OS</td><td>Debian GNU/Linux 12 (bookworm)</td></tr>
+<tr><td>Samba</td><td>4.x</td></tr>
+<tr><td>Share</td><td><code>TimeMachine</code> → <code>/mnt/timemachine</code>, Time Machine enabled</td></tr>
+<tr><td>Quota</td><td><code>fruit:time machine max size = 800G</code></td></tr>
+<tr><td>Client</td><td>macOS 15.7.1, SMB 3.0.2 negotiated</td></tr>
+</tbody></table></div>
+
+</section>
+
+<section id="preflight">
+<div class="section-heading"><span class="section-num">1.2</span><h2>Pre-flight Checklist</h2><span class="section-sub">before you start</span></div>
+
+<p>Confirm all of the following before you begin.</p>
+<ul class="checklist">
+<li>The Raspberry Pi runs Debian 12 (bookworm) or later.</li>
+<li>The Pi is connected by <strong>Ethernet</strong>. Wi-Fi works, but it is slower and less reliable for backups.</li>
+<li>The USB SSD is connected and appears in <code>lsblk</code>.</li>
+<li>The USB SSD is large enough. Typical guidance is 1.5–2× the size of the Mac's storage.</li>
+<li>The Mac runs macOS 10.15 (Catalina) or later. Time Machine over SMB is well supported from Catalina onward.</li>
+<li>You know which username will own the share.</li>
+</ul>
+<div class="callout callout-tip"><span class="callout-label">Why Ethernet Matters</span><div class="callout-body">Backup throughput over Wi-Fi is typically 3–5× slower, and mid-backup disconnects are far more common. The first backup copies everything, so this is the difference between hours and days.</div></div>
+</section>
+
+<section id="architecture">
+<div class="section-heading"><span class="section-num">1.3</span><h2>System Architecture</h2><span class="section-sub">what talks to what</span></div>
+
+<div class="table-scroll"><table class="ref-table">
+<caption>Table 1.3-1. Components</caption>
+<thead><tr><th>Layer</th><th>Component</th><th>Role</th></tr></thead>
+<tbody>
+<tr><td>Hardware</td><td>Raspberry Pi 4 + USB SSD</td><td>Host and backup storage</td></tr>
+<tr><td>Filesystem</td><td><code>ext4</code> at <code>/mnt/timemachine</code></td><td>Holds the sparsebundle</td></tr>
+<tr><td>Share</td><td><code>smbd</code> (Samba)</td><td>Serves the share over SMB, port 445</td></tr>
+<tr><td>Discovery</td><td><code>avahi-daemon</code></td><td>Advertises the share over Bonjour / mDNS</td></tr>
+</tbody></table></div>
+<p>macOS writes a <code>.sparsebundle</code> to the SMB share. Samba's <code>fruit</code> VFS module supplies the Apple-specific behaviour that makes the share acceptable to Time Machine.</p>
+
+</section>
+<section id="quickstart">
+<div class="section-heading"><span class="section-num">2.</span><h2>Quickstart Runbook</h2><span class="section-sub">ten steps, start to finish</span></div>
+<p>These ten steps take a clean Raspberry Pi to a working Time Machine destination. Each step is safe to repeat. Sections 3 and 4 give the full detail behind them.</p><div class="proc"><div class="proc-header"><span class="proc-num">Step 1</span><h3>Update and install the packages</h3></div><div class="proc-body"><pre><code>sudo apt update &amp;&amp; sudo apt -y install samba avahi-daemon</code></pre></div></div><div class="proc"><div class="proc-header"><span class="proc-num">Step 2</span><h3>Prepare the USB SSD</h3></div><div class="proc-body"><p>Identify the device, format it if necessary, and read its UUID.</p><pre><code>lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINT    # identify the drive (e.g. /dev/sda1)
+sudo mkfs.ext4 /dev/sda1                # format as ext4
+sudo blkid /dev/sda1                    # copy the UUID for fstab</code></pre><div class="callout callout-warn"><span class="callout-label">Warning — mkfs Destroys Data</span><div class="callout-body">The <code>mkfs.ext4</code> command erases the target device. Confirm the device name in <code>lsblk</code> first, and skip this step if the disk is already formatted.</div></div></div></div><div class="proc"><div class="proc-header"><span class="proc-num">Step 3</span><h3>Create the mount point and set permissions</h3></div><div class="proc-body"><pre><code>sudo mkdir -p /mnt/timemachine
+sudo chown &lt;username&gt;:&lt;username&gt; /mnt/timemachine
+sudo chmod 755 /mnt/timemachine</code></pre></div></div><div class="proc"><div class="proc-header"><span class="proc-num">Step 4</span><h3>Mount the SSD</h3></div><div class="proc-body"><p>Add the UUID line to <code>/etc/fstab</code> (Section 3.1), then mount and verify.</p><pre><code>sudo mount -a
+mount | grep /mnt/timemachine            # verify it is mounted</code></pre></div></div><div class="proc"><div class="proc-header"><span class="proc-num">Step 5</span><h3>Create the Samba user</h3></div><div class="proc-body"><pre><code>sudo smbpasswd -a &lt;username&gt;             # prompts for the SMB password</code></pre><p>If <code>&lt;username&gt;</code> does not yet exist as a Linux user, run <code>sudo adduser &lt;username&gt;</code> first.</p></div></div><div class="proc"><div class="proc-header"><span class="proc-num">Step 6</span><h3>Configure Samba</h3></div><div class="proc-body"><p>Apply the <code>smb.conf</code> from Section 3.2, then test and restart.</p><pre><code>testparm -s
+sudo systemctl restart smbd</code></pre></div></div><div class="proc"><div class="proc-header"><span class="proc-num">Step 7</span><h3>Enable the services at boot</h3></div><div class="proc-body"><pre><code>sudo systemctl enable smbd avahi-daemon</code></pre></div></div><div class="proc"><div class="proc-header"><span class="proc-num">Step 8</span><h3>Advertise over Bonjour</h3></div><div class="proc-body"><p>Samba's <code>mdns name = mdns</code> is sufficient for most setups. To use a custom Avahi service file, see Section 3.3, then restart Avahi.</p><pre><code>sudo systemctl restart avahi-daemon</code></pre></div></div><div class="proc"><div class="proc-header"><span class="proc-num">Step 9</span><h3>Connect from macOS</h3></div><div class="proc-body"><p>In Finder, choose <strong>Go → Connect to Server</strong> and enter the share address. Then add it in <strong>System Settings → Time Machine</strong>.</p><pre><code>smb://&lt;pi-hostname&gt;/&lt;share-name&gt;</code></pre></div></div><div class="proc"><div class="proc-header"><span class="proc-num">Step 10</span><h3>Verify from macOS</h3></div><div class="proc-body"><pre><code>tmutil destinationinfo
+smbutil statshares -a</code></pre></div></div>
+</section>
+
+<section id="fstab">
+<div class="section-heading"><span class="section-num">3.1</span><h2>/etc/fstab</h2><span class="section-sub">persistent mount</span></div>
+<p>Mount the backup disk by UUID, never by device name: <code>/dev/sda1</code> can change between boots.</p><pre><code>proc            /proc           proc    defaults          0       0
+PARTUUID=&lt;boot-partuuid&gt;  /boot/firmware  vfat    defaults          0       2
+PARTUUID=&lt;root-partuuid&gt;  /               ext4    defaults,noatime,lazytime  0       1
+# a swapfile is not a swap partition, no line here
+#   use  dphys-swapfile swap[on|off]  for that
+UUID=&lt;your-disk-uuid&gt;  /mnt/timemachine  ext4  defaults,noatime,lazytime,nofail,x-systemd.device-timeout=10  0  2</code></pre><div class="callout callout-caution"><span class="callout-label">Caution — Substitute Your Own UUID</span><div class="callout-body">Read your disk's UUID with <code>sudo blkid /dev/sda1</code> and replace <code>&lt;your-disk-uuid&gt;</code>. The <code>nofail</code> option matters: without it, the Pi refuses to finish booting when the USB disk is absent.</div></div>
+</section>
+
+<section id="smbconf">
+<div class="section-heading"><span class="section-num">3.2</span><h2>/etc/samba/smb.conf</h2><span class="section-sub">the whole configuration</span></div>
+<p>The <code>fruit</code> VFS module supplies the Apple-specific behaviour. The <code>[TimeMachine]</code> share section is what makes macOS accept the target.</p><pre><code>[global]
+   server role = standalone server
+   workgroup = WORKGROUP
+
+   # Protocols
+   server min protocol = SMB2
+   client min protocol = SMB2
+   client max protocol = SMB3
+
+   # Discovery (NetBIOS off; Avahi/mDNS handles TM)
+   disable netbios = Yes
+   mdns name = mdns
+
+   # Security / integrity
+   server signing = if_required   # &quot;auto&quot; is a valid alias; testparm normalizes it to this
+   # smb encrypt = required       # optional, CPU cost; recommended on untrusted networks
+
+   security = user
+   map to guest = never
+
+   # macOS compatibility
+   vfs objects = catia fruit streams_xattr
+   fruit:encoding = native
+   fruit:resource = stream
+   fruit:metadata = stream
+   fruit:locking = none
+   fruit:zero_file_id = yes
+
+   # Bind to loopback + local subnet only (adjust /24 if your subnet mask differs)
+   interfaces = lo &lt;LAN_IP&gt;/24
+   bind interfaces only = yes
+
+   # (Optional) Drop legacy port 139; use modern 445 only
+   smb ports = 445
+
+   # Misc
+   idmap config * : backend = tdb
+   load printers = no
+   printing = bsd
+   printcap name = /dev/null
+
+   ntlm auth = ntlmv1-permitted   # use ntlmv2-only if all clients support it
+
+[TimeMachine]
+   path = /mnt/timemachine
+   read only = No
+   valid users = &lt;username&gt;
+   create mask = 0600
+   directory mask = 0700
+   veto files = /._*/.DS_Store/
+   vfs objects = fruit streams_xattr
+   fruit:time machine = yes
+   fruit:time machine max size = 800G</code></pre><div class="callout"><span class="callout-label">Note — The Two Lines That Matter Most</span><div class="callout-body"><code>fruit:time machine = yes</code> is what advertises the share as a Time Machine target. <code>fruit:time machine max size</code> caps how much space Time Machine believes it has, which is how you stop backups consuming the whole disk.</div></div>
+</section>
+
+<section id="avahi">
+<div class="section-heading"><span class="section-num">3.3</span><h2>Avahi Service File</h2><span class="section-sub">optional, for explicit discovery</span></div>
+<p>Samba's <code>mdns name = mdns</code> handles basic advertisement. A custom Avahi service file makes Time Machine discovery more explicit, which helps on networks where mDNS is unreliable.</p><pre><code>&lt;?xml version=&quot;1.0&quot; standalone=&#x27;no&#x27;?&gt;
+&lt;!DOCTYPE service-group SYSTEM &quot;avahi-service.dtd&quot;&gt;
+&lt;service-group&gt;
+  &lt;name replace-wildcards=&quot;yes&quot;&gt;%h&lt;/name&gt;
+
+  &lt;service&gt;
+    &lt;type&gt;_smb._tcp&lt;/type&gt;
+    &lt;port&gt;445&lt;/port&gt;
+  &lt;/service&gt;
+
+  &lt;service&gt;
+    &lt;type&gt;_device-info._tcp&lt;/type&gt;
+    &lt;port&gt;9&lt;/port&gt;
+    &lt;txt-record&gt;model=TimeCapsule8,119&lt;/txt-record&gt;
+  &lt;/service&gt;
+
+  &lt;service&gt;
+    &lt;type&gt;_adisk._tcp&lt;/type&gt;
+    &lt;port&gt;9&lt;/port&gt;
+    &lt;txt-record&gt;dk0=adVN=TimeMachine,adVF=0x82&lt;/txt-record&gt;
+    &lt;txt-record&gt;sys=adVF=0x100&lt;/txt-record&gt;
+  &lt;/service&gt;
+&lt;/service-group&gt;</code></pre><p>Save it as <code>/etc/avahi/services/timemachine.service</code>, then restart Avahi.</p><pre><code>sudo systemctl restart avahi-daemon</code></pre><div class="callout"><span class="callout-label">Note — A Log Message You Can Ignore</span><div class="callout-body"><code>No service file found in /etc/avahi/services</code> is normal. Samba's built-in mDNS is sufficient for most setups.</div></div>
+</section>
+
+<section id="verify">
+<div class="section-heading"><span class="section-num">3.4</span><h2>Verify the Samba Configuration</h2><span class="section-sub">testparm output</span></div>
+<p>Run <code>testparm -s</code> after every change. It normalises aliases and reports errors before you restart the daemon. Expected output for the configuration above:</p><pre><code># testparm -s
+# Global parameters
+[global]
+	bind interfaces only = Yes
+	client max protocol = SMB3
+	client min protocol = SMB2
+	disable netbios = Yes
+	interfaces = &lt;LAN_IP&gt;/8 &lt;LAN_IP&gt;/32
+	load printers = No
+	mdns name = mdns
+	ntlm auth = ntlmv1-permitted
+	printcap name = /dev/null
+	security = USER
+	server min protocol = SMB2
+	server role = standalone server
+	server signing = if_required
+	smb ports = 445
+	fruit:zero_file_id = yes
+	fruit:locking = none
+	fruit:metadata = stream
+	fruit:resource = stream
+	fruit:encoding = native
+	idmap config * : backend = tdb
+	printing = bsd
+	vfs objects = catia fruit streams_xattr
+
+
+[TimeMachine]
+	create mask = 0600
+	directory mask = 0700
+	path = /mnt/timemachine
+	read only = No
+	valid users = &lt;username&gt;
+	veto files = /._*/.DS_Store/
+	vfs objects = fruit streams_xattr
+	fruit:time machine max size = 800G
+	fruit:time machine = yes</code></pre>
+</section>
+<section id="macos">
+<div class="section-heading"><span class="section-num">4.</span><h2>macOS Client Setup and Checks</h2><span class="section-sub">connect and confirm</span></div>
+<p>Connect to the share in Finder before you add it as a Time Machine destination: <strong>Go → Connect to Server</strong>, then <code>smb://&lt;pi-hostname&gt;/&lt;share-name&gt;</code>. Add it in <strong>System Settings → Time Machine</strong>.</p><p>These four commands confirm the destination is registered and the negotiated SMB session is healthy.</p><pre><code>sw_vers
+ProductName:		macOS
+ProductVersion:		15.7.1
+BuildVersion:		24G231
+
+tmutil destinationinfo
+====================================================
+Name          : TimeMachine
+Kind          : Network
+URL           : smb://&lt;username&gt;@&lt;pi-hostname&gt;._smb._tcp.local./&lt;share-name&gt;
+ID            : &lt;destination-id&gt;
+
+tmutil status
+Backup session status:
+{
+    ClientID = &quot;com.apple.backupd&quot;;
+    Percent = &quot;-1&quot;;
+    Running = 0;
+}
+
+smbutil statshares -a
+==================================================================================================
+SHARE                         ATTRIBUTE TYPE                VALUE
+==================================================================================================
+TimeMachine
+                              SERVER_NAME                   &lt;pi-hostname&gt;
+                              USER_ID                       501
+                              SMB_NEGOTIATE                 SMB 3.0.2
+                              SIGNING_SUPPORTED             TRUE
+                              SIGNING_REQUIRED              FALSE
+                              ENCRYPTION_SUPPORTED          TRUE
+--------------------------------------------------------------------------------------------------</code></pre><div class="callout"><span class="callout-label">Note — Empty statshares Output</span><div class="callout-body">If <code>smbutil statshares -a</code> prints nothing, the share is not mounted. Connect in Finder first, then run it again.</div></div>
+</section>
+
+<section id="ops">
+<div class="section-heading"><span class="section-num">5.1</span><h2>Routine Maintenance</h2><span class="section-sub">day to day</span></div>
+<div class="table-scroll"><table class="ref-table"><caption>Table 5.1-1. Routine Commands</caption><thead><tr><th>Task</th><th>Command</th></tr></thead><tbody><tr><td>Restart the services</td><td><code>sudo systemctl restart smbd avahi-daemon</code></td></tr><tr><td>Check service state</td><td><code>systemctl status smbd</code></td></tr><tr><td>Read recent logs</td><td><code>journalctl -u smbd --since "-1d"</code></td></tr><tr><td>Monitor disk usage</td><td><code>df -hT</code></td></tr><tr><td>List disks and UUIDs</td><td><code>lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINT,UUID</code></td></tr><tr><td>Update packages</td><td><code>sudo apt update &amp;&amp; sudo apt -y upgrade</code></td></tr></tbody></table></div>
+</section>
+
+<section id="backup">
+<div class="section-heading"><span class="section-num">5.2</span><h2>Backup and Recovery</h2><span class="section-sub">protect the configuration</span></div>
+<h3>Back up the Pi configuration</h3><p>Three files reconstruct the whole setup:</p><pre><code>/etc/samba/smb.conf
+/etc/fstab
+/etc/avahi/services/timemachine.service   # if you created one</code></pre><p>Capture them together:</p><pre><code>sudo tar czf ~/pi-timemachine-config-$(date +%F).tar.gz \
+  /etc/samba/smb.conf /etc/fstab /etc/avahi/services/</code></pre><h3>Recover the data if SMB fails</h3><p>The sparsebundle sits on a plain ext4 filesystem, so it stays reachable even when <code>smbd</code> will not start. Mount the SSD on any Linux machine and copy the <code>.sparsebundle</code> directory off with <code>rsync</code>. On macOS you can then open it directly in Finder or Disk Utility.</p><h3>Migrate to a new Pi or a larger disk</h3><ol><li>Copy the sparsebundle off the old disk: <code>rsync -avP /mnt/timemachine/ /mnt/new-disk/</code></li><li>Update the UUID in <code>/etc/fstab</code> to the new disk's UUID, from <code>sudo blkid</code></li><li>Restore <code>smb.conf</code>, then <code>sudo systemctl restart smbd</code></li><li>On macOS, remove and re-add the destination. Time Machine recognises the existing sparsebundle.</li></ol><div class="callout callout-tip"><span class="callout-label">Tip — The Sparsebundle Is the Backup</span><div class="callout-body">Everything else in this guide is reproducible in an afternoon. The sparsebundle is not. If you copy one thing off a failing Pi, copy that.</div></div>
+</section>
+
+<section id="perf">
+<div class="section-heading"><span class="section-num">5.3</span><h2>Performance Tips</h2><span class="section-sub">when backups drag</span></div>
+
+<ul>
+<li><strong>Use Ethernet, not Wi-Fi.</strong> Throughput over Wi-Fi is typically 3–5× slower and far more prone to mid-backup disconnects.</li>
+<li><strong>Use a USB 3.0 SSD</strong> rather than a USB 2.0 spinning disk. Write speed dominates the first backup, which can move hundreds of gigabytes.</li>
+<li><strong>Check I/O wait</strong> when backups feel sluggish. High <code>%util</code> on <code>sda</code> means the SSD is the bottleneck.</li>
+</ul>
+<pre><code>iostat -x 2    # requires sysstat: sudo apt install sysstat</code></pre>
+<ul>
+<li><strong>Suspect USB power</strong> if the drive disappears from <code>lsblk</code>. This is a common cause of dropouts on the Pi 4. A powered USB hub, or a Pi 5 with better USB power delivery, resolves it.</li>
+<li><strong>log2ram</strong> keeps logs in RAM to reduce SD card wear. It is visible in <code>df -hT</code> output and is already active on this setup.</li>
+</ul>
+</section>
+
+<section id="sizing">
+<div class="section-heading"><span class="section-num">5.4</span><h2>Sizing and Quotas</h2><span class="section-sub">how much to allocate</span></div>
+
+<p>Set <code>fruit:time machine max size</code> to <strong>70–90%</strong> of the dedicated disk. The reference configuration uses <code>800G</code> on a 1&nbsp;TB disk, which leaves sensible headroom.</p>
+<p>Without a quota, Time Machine assumes the entire filesystem is available and will grow until the disk is full.</p>
+
+</section>
+<section id="trouble">
+<div class="section-heading"><span class="section-num">6.</span><h2>Troubleshooting Playbook</h2><span class="section-sub">symptom first</span></div>
+<p>Each heading is a symptom. Work down the list under the one that matches.</p><h3>The share does not appear in Time Machine settings</h3><ol><li>Confirm Avahi is running: <code>systemctl status avahi-daemon</code></li><li>Confirm <code>fruit:time machine = yes</code> is set in the <code>[TimeMachine]</code> share section.</li><li>Connect manually first in Finder (<code>smb://&lt;pi-hostname&gt;/TimeMachine</code>), then check System Settings → Time Machine.</li><li>If mDNS discovery is unreliable on your network, connect by address instead: <code>smb://&lt;LAN_IP&gt;/TimeMachine</code></li></ol><h3>macOS repeatedly asks for a password</h3><ul><li>Remove stale Keychain entries. Open <strong>Keychain Access</strong>, search for the Pi hostname, delete every matching item, then reconnect.</li><li>Verify the SMB user exists: <code>sudo pdbedit -L</code> should list <code>&lt;username&gt;</code>.</li><li>Confirm <code>valid users = &lt;username&gt;</code> in <code>smb.conf</code> matches the account name exactly.</li></ul><h3>NT_STATUS_NTLM_BLOCKED</h3><p>Use SMB2/3 only, and permit modern NTLM where the client needs it.</p><pre><code>server min protocol = SMB2
+client min protocol = SMB2
+ntlm auth = ntlmv1-permitted</code></pre><p>Then remove the stale Keychain items for the server on macOS and reconnect.</p><h3>The share is visible but will not mount</h3><ul><li>Verify ownership of the mount point: <code>ls -la /mnt/timemachine</code> should show <code>&lt;username&gt;</code>.</li><li>Confirm the SSD is actually mounted: <code>mount | grep /mnt/timemachine</code></li><li>Check <code>journalctl -u smbd</code> for ACL or path denials.</li></ul><h3>Backups stall or fail mid-backup</h3><ul><li>Check network stability. A wired connection is strongly preferred.</li><li>Check USB errors: <code>dmesg | grep -i usb</code> for power or reset messages. A powered hub helps on the Pi 4.</li><li>Check disk health: <code>sudo smartctl -a /dev/sda</code>, which needs <code>smartmontools</code>.</li><li>If the sparsebundle is corrupted, repair it from macOS:</li></ul><pre><code>hdiutil repair /Volumes/TimeMachine/&lt;ComputerName&gt;.sparsebundle</code></pre><p>Or open Disk Utility, select the sparsebundle, and run First Aid.</p><h3>Backups are very slow</h3><ul><li>Confirm you are on Ethernet, not Wi-Fi.</li><li>Check disk I/O with <code>iostat -x 2</code>. High <code>%util</code> on <code>sda</code> points at the SSD.</li><li>The first backup is always slow because it copies everything. Later backups are incremental and much faster.</li></ul><h3>fruit_get_bandsize / fruit_tmsize_do_dirent warnings</h3><p>You may see log messages like these:</p><pre><code>fruit_get_bandsize: Didn&#x27;t find band-size key in [...sparsebundle/Info.plist]
+fruit_tmsize_do_dirent: Processing sparsebundle [...] failed</code></pre><div class="callout"><span class="callout-label">Note — These Warnings Are Harmless</span><div class="callout-body">The <code>fruit</code> module reads the sparsebundle's band size to estimate quota usage. When the <code>band-size</code> key is missing from <code>Info.plist</code> — common with bundles macOS created — Samba falls back to default behaviour. Backups still work correctly. Only Samba's internal size estimate is affected.</div></div>
+</section>
+
+<section id="reference">
+<div class="section-heading"><span class="section-num">7.</span><h2>Captured Reference Output</h2><span class="section-sub">known-good snapshots</span></div>
+<p>Captured output from a working installation, kept for comparison when something looks wrong. Hostnames, usernames and disk identifiers are replaced with placeholders.</p><details class="dump"><summary>smbd — journal excerpt<span class="hint">116 lines</span></summary><div class="dump-body"><pre><code>Oct 15 09:50:53 &lt;pi-hostname&gt; systemd[1]: Starting smbd.service - Samba SMB Daemon...
+Oct 15 09:50:54 &lt;pi-hostname&gt; systemd[1]: Started smbd.service - Samba SMB Daemon.
+Oct 15 09:51:59 &lt;pi-hostname&gt; systemd[1]: Stopping smbd.service - Samba SMB Daemon...
+Oct 15 09:51:59 &lt;pi-hostname&gt; systemd[1]: smbd.service: Deactivated successfully.
+Oct 15 09:51:59 &lt;pi-hostname&gt; systemd[1]: Stopped smbd.service - Samba SMB Daemon.
+Oct 15 09:51:59 &lt;pi-hostname&gt; systemd[1]: Starting smbd.service - Samba SMB Daemon...
+Oct 15 09:52:00 &lt;pi-hostname&gt; systemd[1]: Started smbd.service - Samba SMB Daemon.
+Oct 15 09:54:18 &lt;pi-hostname&gt; systemd[1]: Stopping smbd.service - Samba SMB Daemon...
+Oct 15 09:54:18 &lt;pi-hostname&gt; systemd[1]: smbd.service: Deactivated successfully.
+Oct 15 09:54:18 &lt;pi-hostname&gt; systemd[1]: Stopped smbd.service - Samba SMB Daemon.
+Oct 15 09:54:18 &lt;pi-hostname&gt; systemd[1]: Starting smbd.service - Samba SMB Daemon...
+Oct 15 09:54:18 &lt;pi-hostname&gt; systemd[1]: Started smbd.service - Samba SMB Daemon.
+Oct 15 10:02:57 &lt;pi-hostname&gt; systemd[1]: Stopping smbd.service - Samba SMB Daemon...
+Oct 15 10:02:57 &lt;pi-hostname&gt; systemd[1]: smbd.service: Deactivated successfully.
+Oct 15 10:02:57 &lt;pi-hostname&gt; systemd[1]: Stopped smbd.service - Samba SMB Daemon.
+Oct 15 10:02:58 &lt;pi-hostname&gt; systemd[1]: Starting smbd.service - Samba SMB Daemon...
+Oct 15 10:02:58 &lt;pi-hostname&gt; systemd[1]: Started smbd.service - Samba SMB Daemon.
+Oct 15 10:22:42 &lt;pi-hostname&gt; smbd[2706]: pam_unix(samba:session): session opened for user &lt;username&gt;(uid=1000) by (uid=0)
+Oct 15 10:22:44 &lt;pi-hostname&gt; smbd[2706]: pam_unix(samba:session): session closed for user &lt;username&gt;
+Oct 15 10:32:32 &lt;pi-hostname&gt; systemd[1]: Stopping smbd.service - Samba SMB Daemon...
+Oct 15 10:32:32 &lt;pi-hostname&gt; systemd[1]: smbd.service: Deactivated successfully.
+Oct 15 10:32:32 &lt;pi-hostname&gt; systemd[1]: Stopped smbd.service - Samba SMB Daemon.
+Oct 15 10:32:32 &lt;pi-hostname&gt; systemd[1]: smbd.service: Consumed 5.520s CPU time.
+Oct 15 10:32:33 &lt;pi-hostname&gt; systemd[1]: Starting smbd.service - Samba SMB Daemon...
+Oct 15 10:32:33 &lt;pi-hostname&gt; systemd[1]: Started smbd.service - Samba SMB Daemon.
+Oct 15 10:33:12 &lt;pi-hostname&gt; smbd[3374]: pam_unix(samba:session): session opened for user &lt;username&gt;(uid=1000) by (uid=0)
+Oct 15 10:33:14 &lt;pi-hostname&gt; smbd[3374]: pam_unix(samba:session): session closed for user &lt;username&gt;
+Oct 15 10:35:24 &lt;pi-hostname&gt; systemd[1]: Stopping smbd.service - Samba SMB Daemon...
+Oct 15 10:35:24 &lt;pi-hostname&gt; systemd[1]: smbd.service: Deactivated successfully.
+Oct 15 10:35:24 &lt;pi-hostname&gt; systemd[1]: Stopped smbd.service - Samba SMB Daemon.
+Oct 15 10:35:24 &lt;pi-hostname&gt; systemd[1]: smbd.service: Consumed 6.122s CPU time.
+Oct 15 10:35:24 &lt;pi-hostname&gt; systemd[1]: Starting smbd.service - Samba SMB Daemon...
+Oct 15 10:35:25 &lt;pi-hostname&gt; smbd[3932]: [2025/10/15 10:35:25.033571,  0] ../../source3/smbd/server.c:1741(main)
+Oct 15 10:35:25 &lt;pi-hostname&gt; smbd[3932]:   smbd version 4.17.12-Debian started.
+Oct 15 10:35:25 &lt;pi-hostname&gt; smbd[3932]:   Copyright Andrew Tridgell and the Samba Team 1992-2022
+Oct 15 10:35:25 &lt;pi-hostname&gt; systemd[1]: Started smbd.service - Samba SMB Daemon.
+Oct 16 09:01:53 &lt;pi-hostname&gt; systemd[1]: Reloading smbd.service - Samba SMB Daemon...
+Oct 16 09:01:53 &lt;pi-hostname&gt; systemd[1]: Reloaded smbd.service - Samba SMB Daemon.
+Oct 16 09:01:53 &lt;pi-hostname&gt; smbd[3932]: [2025/10/16 09:01:53.901640,  0] ../../lib/param/loadparm.c:1551(set_variable_helper)
+Oct 16 09:01:53 &lt;pi-hostname&gt; smbd[3932]:   set_variable_helper(yes ; keep extended attributes): value is not boolean!
+Oct 16 09:22:59 &lt;pi-hostname&gt; systemd[1]: Reloading smbd.service - Samba SMB Daemon...
+Oct 16 09:22:59 &lt;pi-hostname&gt; systemd[1]: Reloaded smbd.service - Samba SMB Daemon.
+Oct 16 09:32:22 &lt;pi-hostname&gt; systemd[1]: Reloading smbd.service - Samba SMB Daemon...
+Oct 16 09:32:22 &lt;pi-hostname&gt; systemd[1]: Reloaded smbd.service - Samba SMB Daemon.
+Oct 16 09:48:43 &lt;pi-hostname&gt; smbd[16443]: [2025/10/16 09:48:43.691012,  0] ../../source3/modules/vfs_fruit.c:5150(fruit_get_bandsize)
+Oct 16 09:48:43 &lt;pi-hostname&gt; smbd[16443]:   fruit_get_bandsize: Didn&#x27;t find band-size key in [/mnt/timemachine/&lt;Mac-Computer-Name&gt;.sparsebundle/Info.plist]
+Oct 16 09:48:43 &lt;pi-hostname&gt; smbd[16443]: [2025/10/16 09:48:43.692472,  0] ../../source3/modules/vfs_fruit.c:5275(fruit_tmsize_do_dirent)
+Oct 16 09:48:43 &lt;pi-hostname&gt; smbd[16443]:   fruit_tmsize_do_dirent: Processing sparsebundle [&lt;Mac-Computer-Name&gt;.sparsebundle] failed
+Oct 16 11:05:56 &lt;pi-hostname&gt; smbd[16695]: [2025/10/16 11:05:56.160313,  0] ../../source3/modules/vfs_fruit.c:5150(fruit_get_bandsize)
+Oct 16 11:05:56 &lt;pi-hostname&gt; smbd[16695]:   fruit_get_bandsize: Didn&#x27;t find band-size key in [/mnt/timemachine/&lt;Mac-Computer-Name&gt;.sparsebundle/Info.plist]
+Oct 16 11:05:56 &lt;pi-hostname&gt; smbd[16695]: [2025/10/16 11:05:56.161346,  0] ../../source3/modules/vfs_fruit.c:5275(fruit_tmsize_do_dirent)
+Oct 16 11:05:56 &lt;pi-hostname&gt; smbd[16695]:   fruit_tmsize_do_dirent: Processing sparsebundle [&lt;Mac-Computer-Name&gt;.sparsebundle] failed
+Oct 16 12:06:23 &lt;pi-hostname&gt; smbd[16802]: [2025/10/16 12:06:23.331368,  0] ../../source3/modules/vfs_fruit.c:5150(fruit_get_bandsize)
+Oct 16 12:06:23 &lt;pi-hostname&gt; smbd[16802]:   fruit_get_bandsize: Didn&#x27;t find band-size key in [/mnt/timemachine/&lt;Mac-Computer-Name&gt;.sparsebundle/Info.plist]
+Oct 16 12:06:23 &lt;pi-hostname&gt; smbd[16802]: [2025/10/16 12:06:23.331522,  0] ../../source3/modules/vfs_fruit.c:5275(fruit_tmsize_do_dirent)
+Oct 16 12:06:23 &lt;pi-hostname&gt; smbd[16802]:   fruit_tmsize_do_dirent: Processing sparsebundle [&lt;Mac-Computer-Name&gt;.sparsebundle] failed
+Oct 16 15:07:04 &lt;pi-hostname&gt; smbd[16443]: [2025/10/16 15:07:04.644111,  0] ../../source3/modules/vfs_fruit.c:5150(fruit_get_bandsize)
+Oct 16 15:07:04 &lt;pi-hostname&gt; smbd[16443]:   fruit_get_bandsize: Didn&#x27;t find band-size key in [/mnt/timemachine/&lt;Mac-Computer-Name&gt;.sparsebundle/Info.plist]
+Oct 16 15:07:04 &lt;pi-hostname&gt; smbd[16443]: [2025/10/16 15:07:04.644295,  0] ../../source3/modules/vfs_fruit.c:5275(fruit_tmsize_do_dirent)
+Oct 16 15:07:04 &lt;pi-hostname&gt; smbd[16443]:   fruit_tmsize_do_dirent: Processing sparsebundle [&lt;Mac-Computer-Name&gt;.sparsebundle] failed
+Oct 16 16:26:54 &lt;pi-hostname&gt; systemd[1]: Reloading smbd.service - Samba SMB Daemon...
+Oct 16 16:26:54 &lt;pi-hostname&gt; systemd[1]: Reloaded smbd.service - Samba SMB Daemon.
+Oct 16 16:29:49 &lt;pi-hostname&gt; systemd[1]: Reloading smbd.service - Samba SMB Daemon...
+Oct 16 16:29:49 &lt;pi-hostname&gt; systemd[1]: Reloaded smbd.service - Samba SMB Daemon.
+Oct 16 16:37:49 &lt;pi-hostname&gt; systemd[1]: Reloading smbd.service - Samba SMB Daemon...
+Oct 16 16:37:49 &lt;pi-hostname&gt; systemd[1]: Reloaded smbd.service - Samba SMB Daemon.
+Oct 16 16:41:06 &lt;pi-hostname&gt; systemd[1]: Reloading smbd.service - Samba SMB Daemon...
+Oct 16 16:41:06 &lt;pi-hostname&gt; systemd[1]: Reloaded smbd.service - Samba SMB Daemon.
+Oct 16 16:42:54 &lt;pi-hostname&gt; systemd[1]: Stopping smbd.service - Samba SMB Daemon...
+Oct 16 16:42:54 &lt;pi-hostname&gt; systemd[1]: smbd.service: Deactivated successfully.
+Oct 16 16:42:54 &lt;pi-hostname&gt; systemd[1]: Stopped smbd.service - Samba SMB Daemon.
+Oct 16 16:42:54 &lt;pi-hostname&gt; systemd[1]: smbd.service: Consumed 3h 14min 49.198s CPU time.
+Oct 16 16:42:55 &lt;pi-hostname&gt; systemd[1]: Starting smbd.service - Samba SMB Daemon...
+Oct 16 16:42:55 &lt;pi-hostname&gt; smbd[22251]: [2025/10/16 16:42:55.371278,  0] ../../source3/smbd/server.c:1741(main)
+Oct 16 16:42:55 &lt;pi-hostname&gt; smbd[22251]:   smbd version 4.17.12-Debian started.
+Oct 16 16:42:55 &lt;pi-hostname&gt; smbd[22251]:   Copyright Andrew Tridgell and the Samba Team 1992-2022
+Oct 16 16:42:55 &lt;pi-hostname&gt; systemd[1]: Started smbd.service - Samba SMB Daemon.
+Oct 16 18:01:53 &lt;pi-hostname&gt; systemd[1]: Stopping smbd.service - Samba SMB Daemon...
+Oct 16 18:01:53 &lt;pi-hostname&gt; systemd[1]: smbd.service: Deactivated successfully.
+Oct 16 18:01:53 &lt;pi-hostname&gt; systemd[1]: Stopped smbd.service - Samba SMB Daemon.
+Oct 16 18:01:53 &lt;pi-hostname&gt; systemd[1]: Starting smbd.service - Samba SMB Daemon...
+Oct 16 18:01:54 &lt;pi-hostname&gt; smbd[31158]: [2025/10/16 18:01:54.242123,  0] ../../source3/smbd/server.c:1741(main)
+Oct 16 18:01:54 &lt;pi-hostname&gt; smbd[31158]:   smbd version 4.17.12-Debian started.
+Oct 16 18:01:54 &lt;pi-hostname&gt; systemd[1]: Started smbd.service - Samba SMB Daemon.
+Oct 16 18:06:41 &lt;pi-hostname&gt; systemd[1]: Reloading smbd.service - Samba SMB Daemon...
+Oct 16 18:06:41 &lt;pi-hostname&gt; systemd[1]: Reloaded smbd.service - Samba SMB Daemon.
+Oct 16 18:07:05 &lt;pi-hostname&gt; systemd[1]: Stopping smbd.service - Samba SMB Daemon...
+Oct 16 18:07:05 &lt;pi-hostname&gt; systemd[1]: smbd.service: Deactivated successfully.
+Oct 16 18:07:05 &lt;pi-hostname&gt; systemd[1]: Stopped smbd.service - Samba SMB Daemon.
+Oct 16 18:07:05 &lt;pi-hostname&gt; systemd[1]: Starting smbd.service - Samba SMB Daemon...
+Oct 16 18:07:05 &lt;pi-hostname&gt; smbd[31303]: [2025/10/16 18:07:05.951739,  0] ../../source3/smbd/server.c:1741(main)
+Oct 16 18:07:05 &lt;pi-hostname&gt; smbd[31303]:   smbd version 4.17.12-Debian started.
+Oct 16 18:07:05 &lt;pi-hostname&gt; systemd[1]: Started smbd.service - Samba SMB Daemon.
+Oct 16 19:24:02 &lt;pi-hostname&gt; systemd[1]: Stopping smbd.service - Samba SMB Daemon...
+Oct 16 19:24:02 &lt;pi-hostname&gt; systemd[1]: smbd.service: Deactivated successfully.
+Oct 16 19:24:02 &lt;pi-hostname&gt; systemd[1]: Stopped smbd.service - Samba SMB Daemon.
+Oct 16 19:24:02 &lt;pi-hostname&gt; systemd[1]: smbd.service: Consumed 1.021s CPU time.
+Oct 16 19:24:02 &lt;pi-hostname&gt; systemd[1]: Starting smbd.service - Samba SMB Daemon...
+Oct 16 19:24:03 &lt;pi-hostname&gt; smbd[33259]: [2025/10/16 19:24:03.189414,  0] ../../source3/smbd/server.c:1741(main)
+Oct 16 19:24:03 &lt;pi-hostname&gt; smbd[33259]:   smbd version 4.17.12-Debian started.
+Oct 16 19:24:03 &lt;pi-hostname&gt; systemd[1]: Started smbd.service - Samba SMB Daemon.
+Oct 16 19:31:48 &lt;pi-hostname&gt; systemd[1]: Stopping smbd.service - Samba SMB Daemon...
+Oct 16 19:31:48 &lt;pi-hostname&gt; systemd[1]: smbd.service: Deactivated successfully.
+Oct 16 19:31:48 &lt;pi-hostname&gt; systemd[1]: Stopped smbd.service - Samba SMB Daemon.
+Oct 16 19:31:48 &lt;pi-hostname&gt; systemd[1]: Starting smbd.service - Samba SMB Daemon...
+Oct 16 19:31:49 &lt;pi-hostname&gt; smbd[33812]: [2025/10/16 19:31:49.408940,  0] ../../source3/smbd/server.c:1741(main)
+Oct 16 19:31:49 &lt;pi-hostname&gt; smbd[33812]:   smbd version 4.17.12-Debian started.
+Oct 16 19:31:49 &lt;pi-hostname&gt; systemd[1]: Started smbd.service - Samba SMB Daemon.
+Oct 16 19:49:12 &lt;pi-hostname&gt; smbd[33853]: [2025/10/16 19:49:12.048273,  0] ../../source3/modules/vfs_fruit.c:5150(fruit_get_bandsize)
+Oct 16 19:49:12 &lt;pi-hostname&gt; smbd[33853]:   fruit_get_bandsize: Didn&#x27;t find band-size key in [/mnt/timemachine/&lt;Mac-Computer-Name&gt;.sparsebundle/Info.plist]
+Oct 16 19:49:12 &lt;pi-hostname&gt; smbd[33853]: [2025/10/16 19:49:12.049908,  0] ../../source3/modules/vfs_fruit.c:5275(fruit_tmsize_do_dirent)
+Oct 16 19:49:12 &lt;pi-hostname&gt; smbd[33853]:   fruit_tmsize_do_dirent: Processing sparsebundle [&lt;Mac-Computer-Name&gt;.sparsebundle] failed
+Oct 17 02:08:53 &lt;pi-hostname&gt; smbd[34613]: [2025/10/17 02:08:53.801161,  0] ../../source3/modules/vfs_fruit.c:5150(fruit_get_bandsize)
+Oct 17 02:08:53 &lt;pi-hostname&gt; smbd[34613]:   fruit_get_bandsize: Didn&#x27;t find band-size key in [/mnt/timemachine/&lt;Mac-Computer-Name&gt;.sparsebundle/Info.plist]
+Oct 17 02:08:53 &lt;pi-hostname&gt; smbd[34613]: [2025/10/17 02:08:53.801320,  0] ../../source3/modules/vfs_fruit.c:5275(fruit_tmsize_do_dirent)
+Oct 17 02:08:53 &lt;pi-hostname&gt; smbd[34613]:   fruit_tmsize_do_dirent: Processing sparsebundle [&lt;Mac-Computer-Name&gt;.sparsebundle] failed</code></pre></div></details><details class="dump"><summary>avahi-daemon — journal excerpt<span class="hint">116 lines</span></summary><div class="dump-body"><pre><code>Oct 15 09:21:13 &lt;pi-hostname&gt; systemd[1]: Starting avahi-daemon.service - Avahi mDNS/DNS-SD Stack...
+Oct 15 09:21:14 &lt;pi-hostname&gt; avahi-daemon[488]: Found user &#x27;avahi&#x27; (UID 104) and group &#x27;avahi&#x27; (GID 109).
+Oct 15 09:21:14 &lt;pi-hostname&gt; avahi-daemon[488]: Successfully dropped root privileges.
+Oct 15 09:21:14 &lt;pi-hostname&gt; avahi-daemon[488]: avahi-daemon 0.8 starting up.
+Oct 15 09:21:14 &lt;pi-hostname&gt; avahi-daemon[488]: Successfully called chroot().
+Oct 15 09:21:14 &lt;pi-hostname&gt; avahi-daemon[488]: Successfully dropped remaining capabilities.
+Oct 15 09:21:14 &lt;pi-hostname&gt; avahi-daemon[488]: No service file found in /etc/avahi/services.
+Oct 15 09:21:14 &lt;pi-hostname&gt; avahi-daemon[488]: Joining mDNS multicast group on interface lo.IPv6 with address ::1.
+Oct 15 09:21:14 &lt;pi-hostname&gt; avahi-daemon[488]: New relevant interface lo.IPv6 for mDNS.
+Oct 15 09:21:14 &lt;pi-hostname&gt; avahi-daemon[488]: Joining mDNS multicast group on interface lo.IPv4 with address &lt;LAN_IP&gt;.
+Oct 15 09:21:14 &lt;pi-hostname&gt; avahi-daemon[488]: New relevant interface lo.IPv4 for mDNS.
+Oct 15 09:21:14 &lt;pi-hostname&gt; avahi-daemon[488]: Network interface enumeration completed.
+Oct 15 09:21:14 &lt;pi-hostname&gt; avahi-daemon[488]: Registering new address record for ::1 on lo.*.
+Oct 15 09:21:14 &lt;pi-hostname&gt; avahi-daemon[488]: Registering new address record for &lt;LAN_IP&gt; on lo.IPv4.
+Oct 15 09:21:14 &lt;pi-hostname&gt; systemd[1]: Started avahi-daemon.service - Avahi mDNS/DNS-SD Stack.
+Oct 15 09:21:14 &lt;pi-hostname&gt; avahi-daemon[488]: Server startup complete. Host name is &lt;pi-hostname&gt;.local. Local service cookie is 2193710489.
+Oct 15 09:21:18 &lt;pi-hostname&gt; avahi-daemon[488]: Joining mDNS multicast group on interface wlan0.IPv6 with address fe80::a848:c27c:1c93:5f60.
+Oct 15 09:21:18 &lt;pi-hostname&gt; avahi-daemon[488]: New relevant interface wlan0.IPv6 for mDNS.
+Oct 15 09:21:18 &lt;pi-hostname&gt; avahi-daemon[488]: Registering new address record for fe80::a848:c27c:1c93:5f60 on wlan0.*.
+Oct 15 09:21:18 &lt;pi-hostname&gt; avahi-daemon[488]: Joining mDNS multicast group on interface wlan0.IPv4 with address &lt;LAN_IP&gt;.
+Oct 15 09:21:18 &lt;pi-hostname&gt; avahi-daemon[488]: New relevant interface wlan0.IPv4 for mDNS.
+Oct 15 09:21:18 &lt;pi-hostname&gt; avahi-daemon[488]: Registering new address record for &lt;LAN_IP&gt; on wlan0.IPv4.
+Oct 15 09:21:19 &lt;pi-hostname&gt; avahi-daemon[488]: Joining mDNS multicast group on interface eth0.IPv6 with address fe80::e748:ce4c:c8c7:c505.
+Oct 15 09:21:19 &lt;pi-hostname&gt; avahi-daemon[488]: New relevant interface eth0.IPv6 for mDNS.
+Oct 15 09:21:19 &lt;pi-hostname&gt; avahi-daemon[488]: Registering new address record for fe80::e748:ce4c:c8c7:c505 on eth0.*.
+Oct 15 09:21:19 &lt;pi-hostname&gt; avahi-daemon[488]: Joining mDNS multicast group on interface eth0.IPv4 with address &lt;LAN_IP&gt;.
+Oct 15 09:21:19 &lt;pi-hostname&gt; avahi-daemon[488]: New relevant interface eth0.IPv4 for mDNS.
+Oct 15 09:21:19 &lt;pi-hostname&gt; avahi-daemon[488]: Registering new address record for &lt;LAN_IP&gt; on eth0.IPv4.
+Oct 15 09:21:19 &lt;pi-hostname&gt; avahi-daemon[488]: Leaving mDNS multicast group on interface wlan0.IPv6 with address fe80::a848:c27c:1c93:5f60.
+Oct 15 09:21:19 &lt;pi-hostname&gt; avahi-daemon[488]: Joining mDNS multicast group on interface wlan0.IPv6 with address fd5b:d04e:624a:1:f388:68cb:715:457c.
+Oct 15 09:21:19 &lt;pi-hostname&gt; avahi-daemon[488]: Registering new address record for fd5b:d04e:624a:1:f388:68cb:715:457c on wlan0.*.
+Oct 15 09:21:19 &lt;pi-hostname&gt; avahi-daemon[488]: Withdrawing address record for fe80::a848:c27c:1c93:5f60 on wlan0.
+Oct 15 09:21:20 &lt;pi-hostname&gt; avahi-daemon[488]: Leaving mDNS multicast group on interface eth0.IPv6 with address fe80::e748:ce4c:c8c7:c505.
+Oct 15 09:21:20 &lt;pi-hostname&gt; avahi-daemon[488]: Joining mDNS multicast group on interface eth0.IPv6 with address fd5b:d04e:624a:1:887b:2b48:d84a:903d.
+Oct 15 09:21:20 &lt;pi-hostname&gt; avahi-daemon[488]: Registering new address record for fd5b:d04e:624a:1:887b:2b48:d84a:903d on eth0.*.
+Oct 15 09:21:20 &lt;pi-hostname&gt; avahi-daemon[488]: Withdrawing address record for fe80::e748:ce4c:c8c7:c505 on eth0.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[488]: Got SIGTERM, quitting.
+Oct 15 09:58:06 &lt;pi-hostname&gt; systemd[1]: Stopping avahi-daemon.service - Avahi mDNS/DNS-SD Stack...
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[488]: Leaving mDNS multicast group on interface wlan0.IPv6 with address fd5b:d04e:624a:1:f388:68cb:715:457c.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[488]: Leaving mDNS multicast group on interface wlan0.IPv4 with address &lt;LAN_IP&gt;.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[488]: Leaving mDNS multicast group on interface eth0.IPv6 with address fd5b:d04e:624a:1:887b:2b48:d84a:903d.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[488]: Leaving mDNS multicast group on interface eth0.IPv4 with address &lt;LAN_IP&gt;.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[488]: Leaving mDNS multicast group on interface lo.IPv6 with address ::1.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[488]: Leaving mDNS multicast group on interface lo.IPv4 with address &lt;LAN_IP&gt;.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[488]: avahi-daemon 0.8 exiting.
+Oct 15 09:58:06 &lt;pi-hostname&gt; systemd[1]: avahi-daemon.service: Deactivated successfully.
+Oct 15 09:58:06 &lt;pi-hostname&gt; systemd[1]: Stopped avahi-daemon.service - Avahi mDNS/DNS-SD Stack.
+Oct 15 09:58:06 &lt;pi-hostname&gt; systemd[1]: avahi-daemon.service: Consumed 1.077s CPU time.
+Oct 15 09:58:06 &lt;pi-hostname&gt; systemd[1]: Starting avahi-daemon.service - Avahi mDNS/DNS-SD Stack...
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: Process 488 died: No such process; trying to remove PID file. (/run/avahi-daemon//pid)
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: Found user &#x27;avahi&#x27; (UID 104) and group &#x27;avahi&#x27; (GID 109).
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: Successfully dropped root privileges.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: avahi-daemon 0.8 starting up.
+Oct 15 09:58:06 &lt;pi-hostname&gt; systemd[1]: Started avahi-daemon.service - Avahi mDNS/DNS-SD Stack.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: Successfully called chroot().
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: Successfully dropped remaining capabilities.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: No service file found in /etc/avahi/services.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: Joining mDNS multicast group on interface wlan0.IPv6 with address fd5b:d04e:624a:1:f388:68cb:715:457c.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: New relevant interface wlan0.IPv6 for mDNS.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: Joining mDNS multicast group on interface wlan0.IPv4 with address &lt;LAN_IP&gt;.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: New relevant interface wlan0.IPv4 for mDNS.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: Joining mDNS multicast group on interface eth0.IPv6 with address fd5b:d04e:624a:1:887b:2b48:d84a:903d.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: New relevant interface eth0.IPv6 for mDNS.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: Joining mDNS multicast group on interface eth0.IPv4 with address &lt;LAN_IP&gt;.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: New relevant interface eth0.IPv4 for mDNS.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: Joining mDNS multicast group on interface lo.IPv6 with address ::1.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: Joining mDNS multicast group on interface lo.IPv4 with address &lt;LAN_IP&gt;.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: Network interface enumeration completed.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: Registering new address record for fd5b:d04e:624a:1:f388:68cb:715:457c on wlan0.*.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: Registering new address record for &lt;LAN_IP&gt; on wlan0.IPv4.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: Registering new address record for fd5b:d04e:624a:1:887b:2b48:d84a:903d on eth0.*.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: Registering new address record for &lt;LAN_IP&gt; on eth0.IPv4.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: Registering new address record for ::1 on lo.*.
+Oct 15 09:58:06 &lt;pi-hostname&gt; avahi-daemon[2387]: Registering new address record for &lt;LAN_IP&gt; on lo.IPv4.
+Oct 15 09:58:07 &lt;pi-hostname&gt; avahi-daemon[2387]: Server startup complete. Host name is &lt;pi-hostname&gt;.local. Local service cookie is 3073884954.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[2387]: Got SIGTERM, quitting.
+Oct 15 10:35:25 &lt;pi-hostname&gt; systemd[1]: Stopping avahi-daemon.service - Avahi mDNS/DNS-SD Stack...
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[2387]: Leaving mDNS multicast group on interface wlan0.IPv6 with address fd5b:d04e:624a:1:f388:68cb:715:457c.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[2387]: Leaving mDNS multicast group on interface wlan0.IPv4 with address &lt;LAN_IP&gt;.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[2387]: Leaving mDNS multicast group on interface eth0.IPv6 with address fd5b:d04e:624a:1:887b:2b48:d84a:903d.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[2387]: Leaving mDNS multicast group on interface eth0.IPv4 with address &lt;LAN_IP&gt;.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[2387]: Leaving mDNS multicast group on interface lo.IPv6 with address ::1.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[2387]: Leaving mDNS multicast group on interface lo.IPv4 with address &lt;LAN_IP&gt;.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[2387]: avahi-daemon 0.8 exiting.
+Oct 15 10:35:25 &lt;pi-hostname&gt; systemd[1]: avahi-daemon.service: Deactivated successfully.
+Oct 15 10:35:25 &lt;pi-hostname&gt; systemd[1]: Stopped avahi-daemon.service - Avahi mDNS/DNS-SD Stack.
+Oct 15 10:35:25 &lt;pi-hostname&gt; systemd[1]: avahi-daemon.service: Consumed 1.486s CPU time.
+Oct 15 10:35:25 &lt;pi-hostname&gt; systemd[1]: Starting avahi-daemon.service - Avahi mDNS/DNS-SD Stack...
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: Process 2387 died: No such process; trying to remove PID file. (/run/avahi-daemon//pid)
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: Found user &#x27;avahi&#x27; (UID 104) and group &#x27;avahi&#x27; (GID 109).
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: Successfully dropped root privileges.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: avahi-daemon 0.8 starting up.
+Oct 15 10:35:25 &lt;pi-hostname&gt; systemd[1]: Started avahi-daemon.service - Avahi mDNS/DNS-SD Stack.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: Successfully called chroot().
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: Successfully dropped remaining capabilities.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: No service file found in /etc/avahi/services.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: Joining mDNS multicast group on interface wlan0.IPv6 with address fd5b:d04e:624a:1:f388:68cb:715:457c.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: New relevant interface wlan0.IPv6 for mDNS.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: Joining mDNS multicast group on interface wlan0.IPv4 with address &lt;LAN_IP&gt;.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: New relevant interface wlan0.IPv4 for mDNS.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: Joining mDNS multicast group on interface eth0.IPv6 with address fd5b:d04e:624a:1:887b:2b48:d84a:903d.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: New relevant interface eth0.IPv6 for mDNS.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: Joining mDNS multicast group on interface eth0.IPv4 with address &lt;LAN_IP&gt;.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: New relevant interface eth0.IPv4 for mDNS.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: Joining mDNS multicast group on interface lo.IPv6 with address ::1.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: Joining mDNS multicast group on interface lo.IPv4 with address &lt;LAN_IP&gt;.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: Network interface enumeration completed.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: Registering new address record for fd5b:d04e:624a:1:f388:68cb:715:457c on wlan0.*.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: Registering new address record for &lt;LAN_IP&gt; on wlan0.IPv4.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: Registering new address record for fd5b:d04e:624a:1:887b:2b48:d84a:903d on eth0.*.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: Registering new address record for &lt;LAN_IP&gt; on eth0.IPv4.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: Registering new address record for ::1 on lo.*.
+Oct 15 10:35:25 &lt;pi-hostname&gt; avahi-daemon[3940]: Registering new address record for &lt;LAN_IP&gt; on lo.IPv4.
+Oct 15 10:35:26 &lt;pi-hostname&gt; avahi-daemon[3940]: Server startup complete. Host name is &lt;pi-hostname&gt;.local. Local service cookie is 1201069127.
+Oct 16 00:28:42 &lt;pi-hostname&gt; avahi-daemon[3940]: Withdrawing address record for &lt;LAN_IP&gt; on eth0.
+Oct 16 00:28:42 &lt;pi-hostname&gt; avahi-daemon[3940]: Leaving mDNS multicast group on interface eth0.IPv4 with address &lt;LAN_IP&gt;.</code></pre></div></details><details class="dump"><summary>systemd — service status<span class="hint">71 lines</span></summary><div class="dump-body"><pre><code>systemd 252 (252.39-1~deb12u1)
++PAM +AUDIT +SELINUX +APPARMOR +IMA +SMACK +SECCOMP +GCRYPT -GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP +LIBFDISK +PCRE2 -PWQUALITY +P11KIT +QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD -BPF_FRAMEWORK -XKBCOMMON +UTMP +SYSVINIT default-hierarchy=unified
+
+● smbd.service - Samba SMB Daemon
+     Loaded: loaded (/lib/systemd/system/smbd.service; enabled; preset: enabled)
+     Active: active (running) since Thu 2025-10-16 19:31:49 PDT; 13h ago
+       Docs: man:smbd(8)
+             man:samba(7)
+             man:smb.conf(5)
+    Process: 33808 ExecCondition=/usr/share/samba/is-configured smb (code=exited, status=0/SUCCESS)
+    Process: 33811 ExecStartPre=/usr/share/samba/update-apparmor-samba-profile (code=exited, status=0/SUCCESS)
+   Main PID: 33812 (smbd)
+     Status: &quot;smbd: ready to serve connections...&quot;
+      Tasks: 9 (limit: 3915)
+        CPU: 16min 6.796s
+     CGroup: /system.slice/smbd.service
+             ├─33812 /usr/sbin/smbd --foreground --no-process-group
+             ├─33814 /usr/sbin/smbd --foreground --no-process-group
+             ├─33815 /usr/sbin/smbd --foreground --no-process-group
+             ├─34263 /usr/sbin/smbd --foreground --no-process-group
+             └─35761 /usr/sbin/smbd --foreground --no-process-group
+
+Oct 16 19:31:49 &lt;pi-hostname&gt; smbd[33812]:   Copyright Andrew Tridgell and the Samba Team 1992-2022
+Oct 16 19:31:49 &lt;pi-hostname&gt; systemd[1]: Started smbd.service - Samba SMB Daemon.
+Oct 16 19:49:12 &lt;pi-hostname&gt; smbd[33853]: [2025/10/16 19:49:12.048273,  0] ../../source3/modules/vfs_fruit.c:5150(fruit_get_bandsize)
+Oct 16 19:49:12 &lt;pi-hostname&gt; smbd[33853]:   fruit_get_bandsize: Didn&#x27;t find band-size key in [/mnt/timemachine/&lt;Mac-Computer-Name&gt;.sparsebundle/Info.plist]
+Oct 16 19:49:12 &lt;pi-hostname&gt; smbd[33853]: [2025/10/16 19:49:12.049908,  0] ../../source3/modules/vfs_fruit.c:5275(fruit_tmsize_do_dirent)
+Oct 16 19:49:12 &lt;pi-hostname&gt; smbd[33853]:   fruit_tmsize_do_dirent: Processing sparsebundle [&lt;Mac-Computer-Name&gt;.sparsebundle] failed
+Oct 17 02:08:53 &lt;pi-hostname&gt; smbd[34613]: [2025/10/17 02:08:53.801161,  0] ../../source3/modules/vfs_fruit.c:5150(fruit_get_bandsize)
+Oct 17 02:08:53 &lt;pi-hostname&gt; smbd[34613]:   fruit_get_bandsize: Didn&#x27;t find band-size key in [/mnt/timemachine/&lt;Mac-Computer-Name&gt;.sparsebundle/Info.plist]
+Oct 17 02:08:53 &lt;pi-hostname&gt; smbd[34613]: [2025/10/17 02:08:53.801320,  0] ../../source3/modules/vfs_fruit.c:5275(fruit_tmsize_do_dirent)
+Oct 17 02:08:53 &lt;pi-hostname&gt; smbd[34613]:   fruit_tmsize_do_dirent: Processing sparsebundle [&lt;Mac-Computer-Name&gt;.sparsebundle] failed
+
+○ nmbd.service - Samba NMB Daemon
+     Loaded: loaded (/lib/systemd/system/nmbd.service; disabled; preset: enabled)
+     Active: inactive (dead) (Result: exec-condition) since Thu 2025-10-16 19:24:02 PDT; 14h ago
+   Duration: 1d 6h 2min 49.542s
+  Condition: start condition failed at Thu 2025-10-16 19:24:02 PDT; 14h ago
+       Docs: man:nmbd(8)
+             man:samba(7)
+             man:smb.conf(5)
+    Process: 33252 ExecCondition=/usr/share/samba/is-configured nmb (code=exited, status=1/FAILURE)
+        CPU: 332ms
+
+Oct 16 19:24:02 &lt;pi-hostname&gt; systemd[1]: Starting nmbd.service - Samba NMB Daemon...
+Oct 16 19:24:02 &lt;pi-hostname&gt; systemd[1]: nmbd.service: Skipped due to &#x27;exec-condition&#x27;.
+Oct 16 19:24:02 &lt;pi-hostname&gt; systemd[1]: Condition check resulted in nmbd.service - Samba NMB Daemon being skipped.
+
+
+● avahi-daemon.service - Avahi mDNS/DNS-SD Stack
+     Loaded: loaded (/lib/systemd/system/avahi-daemon.service; enabled; preset: enabled)
+     Active: active (running) since Wed 2025-10-15 10:35:25 PDT; 1 day 22h ago
+TriggeredBy: ● avahi-daemon.socket
+   Main PID: 3940 (avahi-daemon)
+     Status: &quot;avahi-daemon 0.8 starting up.&quot;
+      Tasks: 2 (limit: 3915)
+        CPU: 1min 6.307s
+     CGroup: /system.slice/avahi-daemon.service
+             ├─3940 &quot;avahi-daemon: running [&lt;pi-hostname&gt;.local]&quot;
+             └─3941 &quot;avahi-daemon: chroot helper&quot;
+
+Oct 16 00:30:02 &lt;pi-hostname&gt; avahi-daemon[3940]: Withdrawing address record for fe80::e748:ce4c:c8c7:c505 on eth0.
+Oct 16 00:30:05 &lt;pi-hostname&gt; avahi-daemon[3940]: Joining mDNS multicast group on interface eth0.IPv4 with address &lt;LAN_IP&gt;.
+Oct 16 00:30:05 &lt;pi-hostname&gt; avahi-daemon[3940]: New relevant interface eth0.IPv4 for mDNS.
+Oct 16 00:30:05 &lt;pi-hostname&gt; avahi-daemon[3940]: Registering new address record for &lt;LAN_IP&gt; on eth0.IPv4.
+Oct 16 16:08:52 &lt;pi-hostname&gt; avahi-daemon[3940]: Interface wlan0.IPv6 no longer relevant for mDNS.
+Oct 16 16:08:52 &lt;pi-hostname&gt; avahi-daemon[3940]: Leaving mDNS multicast group on interface wlan0.IPv6 with address fd5b:d04e:624a:1:f388:68cb:715:457c.
+Oct 16 16:08:52 &lt;pi-hostname&gt; avahi-daemon[3940]: Interface wlan0.IPv4 no longer relevant for mDNS.
+Oct 16 16:08:52 &lt;pi-hostname&gt; avahi-daemon[3940]: Leaving mDNS multicast group on interface wlan0.IPv4 with address &lt;LAN_IP&gt;.
+Oct 16 16:08:52 &lt;pi-hostname&gt; avahi-daemon[3940]: Withdrawing address record for fd5b:d04e:624a:1:f388:68cb:715:457c on wlan0.
+Oct 16 16:08:52 &lt;pi-hostname&gt; avahi-daemon[3940]: Withdrawing address record for &lt;LAN_IP&gt; on wlan0.</code></pre></div></details><details class="dump"><summary>Storage — lsblk and df<span class="hint">19 lines</span></summary><div class="dump-body"><pre><code># lsblk
+NAME          SIZE FSTYPE MOUNTPOINT       UUID
+sda         931.5G                         
+└─sda1      931.5G ext4   /mnt/timemachine &lt;your-disk-uuid&gt;
+mmcblk0      29.8G                         
+├─mmcblk0p1   512M vfat   /boot/firmware   &lt;boot-uuid&gt;
+└─mmcblk0p2  29.3G ext4   /                &lt;root-uuid&gt;
+
+# df -hT
+Filesystem     Type      Size  Used Avail Use% Mounted on
+udev           devtmpfs  1.6G     0  1.6G   0% /dev
+tmpfs          tmpfs     380M   19M  361M   5% /run
+/dev/mmcblk0p2 ext4       29G  2.6G   25G  10% /
+tmpfs          tmpfs     1.9G     0  1.9G   0% /dev/shm
+tmpfs          tmpfs     5.0M     0  5.0M   0% /run/lock
+/dev/mmcblk0p1 vfat      510M   77M  434M  16% /boot/firmware
+log2ram        tmpfs     128M  1.2M  127M   1% /var/log
+tmpfs          tmpfs     380M  4.0K  380M   1% /run/user/1000
+/dev/sda1      ext4      916G  430G  440G  50% /mnt/timemachine</code></pre></div></details>
+</section>
+  </div>
+
+  <footer class="doc-footer">
+    <span>RPTM-1</span>
+    <span>Raspberry Pi Time Machine · Build, Operate &amp; Troubleshoot</span>
+  </footer>
+</main>
+
+</div>
+
+</body>
+</html>
